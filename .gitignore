@@ -6,6 +6,7 @@ __pycache__/
 .venv/
 images/
 text
+*.docx
 
 # C extensions
 *.so
