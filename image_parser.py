@@ -6,7 +6,7 @@ import pytesseract as tess
 from PIL import Image
 import os
 from multiprocessing import Pool
-from docx import Document
+import csv
 
 tess.pytesseract.tesseract_cmd = r'D:\Users\Klork\AppData\Local\Tesseract-OCR\tesseract.exe'
 base_url = 'https://manganelo.com/manga/read_onepunchman_one'
@@ -137,20 +137,33 @@ def get_wordlist():
     return wordlist
 
 
-def get_word_dict(word_list):
+def get_word_dict(word_list, translate_list):
     word_dict = {}
-    for word in word_list:
-        word = word.title()
-        if word_dict.get(word) is None:
-            word_dict[word] = ''
+    for i in range(len(word_list)):
+        if word_list[i] != translate_list[i]:
+            word_dict[word_list[i]] = translate_list[i]
     return word_dict
 
 
 def write_word_dict(word_dict):
-    doc = Document()
-    for word in word_dict.keys():
-        doc.add_paragraph(word)
-    doc.save("words.docx")
+    with open('word_dict.csv', 'w+', encoding='UTF-8') as file:
+        writer = csv.writer(file)
+        for key, value in word_dict.items():
+            writer.writerow((key, value))
+
+
+def translate(word_list):
+    session = requests.session()
+    url = 'https://translate.yandex.net/api/v1.5/tr.json/translate'
+    api = 'trnsl.1.1.20200229T104608Z.60e8d78e7ab50c16.0d9b273f3f0a7b20f524efb46cc4338f151aa31c'
+    params = {
+        "key": api,
+        "text": word_list,
+        "lang": 'en-ru'
+    }
+    request = session.get(url, headers=headers, params=params)
+    translate_list = request.json()['text']
+    return translate_list
 
 
 def main():
@@ -162,7 +175,9 @@ def main():
     # get_image_from_url(links)
     get_text_from_image()
     word_list = get_wordlist()
-    word_dict = get_word_dict(word_list)
+    translate_list = translate(word_list)
+    print(translate_list)
+    word_dict = get_word_dict(word_list, translate_list)
     print(word_dict)
     write_word_dict(word_dict)
 
@@ -170,3 +185,4 @@ def main():
 if __name__ == '__main__':
     rewrite()
     main()
+
