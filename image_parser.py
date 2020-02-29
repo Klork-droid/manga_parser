@@ -7,6 +7,7 @@ from PIL import Image
 import os
 from multiprocessing import Pool
 import csv
+import time
 
 tess.pytesseract.tesseract_cmd = r'D:\Users\Klork\AppData\Local\Tesseract-OCR\tesseract.exe'
 base_url = 'https://manganelo.com/manga/read_onepunchman_one'
@@ -40,7 +41,6 @@ def get_count_page():
 
 
 def get_image_from_url(url):
-    # for url in links:
     print('get image from ', url)
     begin = url.rfind('_')
     begin = url[:begin].rfind('/') + 1
@@ -50,19 +50,15 @@ def get_image_from_url(url):
         file.write(img.content)
 
 
-def get_text_from_image():
-    listdir = os.listdir()
-    for image in listdir[:]:
-        print('get text from ', image)
-        img = cv.imread(f'{image}', 0)
-        ret, th1 = cv.threshold(img, 111, 255, cv.THRESH_BINARY)
-        cv.imwrite('th1.jpg', th1)
-        img = Image.open('th1.jpg')
-        text = tess.image_to_string(img, lang='eng')
-        os.chdir('..')
-        with open('text', 'a', encoding='UTF-8') as file:
-            file.write(f'{text} ')
-        os.chdir('images')
+def get_text_from_image(image):
+    print('get text from ', image)
+    img = cv.imread(f'{image}', 0)
+    ret, th1 = cv.threshold(img, 111, 255, cv.THRESH_BINARY)
+    cv.imwrite(f't{image}', th1)
+    img = Image.open(f't{image}')
+    text = tess.image_to_string(img, lang='eng')
+    with open('1text', 'a', encoding='UTF-8') as file:
+        file.write(f'{text} ')
 
 
 def count_image_from_url(count):
@@ -98,18 +94,18 @@ def count_image_from_url(count):
 def rewrite():
     if 'images' not in os.listdir():
         os.mkdir('images')
-    os.chdir('images')
-    list = os.listdir()
-    for file in list:
-        os.remove(file)
-    os.chdir('..')
+    else:
+        os.chdir('images')
+        list = os.listdir()
+        for file in list:
+            os.remove(file)
+        os.chdir('..')
     with open('text', 'w+') as file:
         pass
 
 
 def get_wordlist():
-    os.chdir('..')
-    with open('text', 'r+', encoding="UTF-8") as file:
+    with open('1text', 'r+', encoding="UTF-8") as file:
         wordlist = []
         for line in file.readlines():
             line = line[:-1]
@@ -146,7 +142,7 @@ def get_word_dict(word_list, translate_list):
 
 
 def write_word_dict(word_dict):
-    with open('word_dict.csv', 'w+', encoding='UTF-8') as file:
+    with open('word_dict.csv', 'w+', newline='', encoding='UTF-8') as file:
         writer = csv.writer(file)
         for key, value in word_dict.items():
             writer.writerow((key, value))
@@ -172,9 +168,13 @@ def main():
     os.chdir('images')
     with Pool(30) as p:
         p.map(get_image_from_url, links)
-    # get_image_from_url(links)
-    get_text_from_image()
+    time.sleep(15)
+    listdir = os.listdir()
+    with Pool(3) as p:
+        p.map(get_text_from_image, listdir)
+    time.sleep(15)
     word_list = get_wordlist()
+    os.chdir('..')
     translate_list = translate(word_list)
     print(translate_list)
     word_dict = get_word_dict(word_list, translate_list)
