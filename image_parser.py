@@ -6,6 +6,7 @@ import pytesseract as tess
 from PIL import Image
 import os
 from multiprocessing import Pool
+from docx import Document
 
 tess.pytesseract.tesseract_cmd = r'D:\Users\Klork\AppData\Local\Tesseract-OCR\tesseract.exe'
 base_url = 'https://manganelo.com/manga/read_onepunchman_one'
@@ -14,7 +15,7 @@ headers = {
     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
     'user-agent': user_agent}
 alphabet = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'z', 'x',
-            'c', 'v', 'b', 'n', 'm']
+            'c', 'v', 'b', 'n', 'm', "'"]
 
 
 def get_count_page():
@@ -51,7 +52,7 @@ def get_image_from_url(url):
 
 def get_text_from_image():
     listdir = os.listdir()
-    for image in listdir[:-1]:
+    for image in listdir[:]:
         print('get text from ', image)
         img = cv.imread(f'{image}', 0)
         ret, th1 = cv.threshold(img, 111, 255, cv.THRESH_BINARY)
@@ -95,6 +96,8 @@ def count_image_from_url(count):
 
 
 def rewrite():
+    if 'images' not in os.listdir():
+        os.mkdir('images')
     os.chdir('images')
     list = os.listdir()
     for file in list:
@@ -112,18 +115,21 @@ def get_wordlist():
             line = line[:-1]
             line = line.split(' ')
             if line[0] != "":
-                print(line)
                 for element in line:
                     if len(element) > 1:
                         word = element.lower()
                         x = word
+                        trash = ''
                         for i in x:
+                            trash += i
+                            if trash == i * 3:
+                                word = ''
+                                break
                             if i not in alphabet:
-                                print(i)
                                 if i == '-':
-                                    word = element.replace(i, ' ')
+                                    word = word.replace(i, ' ')
                                 else:
-                                    word = element.replace(i, '')
+                                    word = word.replace(i, '')
                         word = word.strip()
                         if len(word) > 2:
                             wordlist.append(word.title())
@@ -133,20 +139,18 @@ def get_wordlist():
 
 def get_word_dict(word_list):
     word_dict = {}
-    start = datetime.now()
     for word in word_list:
         word = word.title()
-        word_dict[word] = ''
-    print('rewrite time is ', datetime.now() - start)
-
-    word_dict = {}
-    start = datetime.now()
-    for word in word_list:
-        word = word.title()
-        if word_dict.get(word) is not None:
+        if word_dict.get(word) is None:
             word_dict[word] = ''
-    print('if check time is', datetime.now() - start)
     return word_dict
+
+
+def write_word_dict(word_dict):
+    doc = Document()
+    for word in word_dict.keys():
+        doc.add_paragraph(word)
+    doc.save("words.docx")
 
 
 def main():
@@ -158,21 +162,11 @@ def main():
     # get_image_from_url(links)
     get_text_from_image()
     word_list = get_wordlist()
-    get_word_dict(word_list)
+    word_dict = get_word_dict(word_list)
+    print(word_dict)
+    write_word_dict(word_dict)
 
 
 if __name__ == '__main__':
-    # rewrite()
-    # main()
-    element = '|-..._-T_Be-That'
-    word = element.lower()
-    x = word
-    print(word)
-    word = word.replace('.', '')
-    print(word)
-    for i in x:
-        if i not in alphabet or i in ['|', '.', '_']:
-            print(i)
-            word = element.replace(i, '')
-    word = word.strip()
-    print(word)
+    rewrite()
+    main()
